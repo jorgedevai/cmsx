@@ -1,0 +1,83 @@
+# ═══════════════════════════════════════════════════════════════════════
+# CMSx — Full Stack (DB + Backend + Frontend)
+# Usage: cp .env.example .env && docker compose up -d
+# ═══════════════════════════════════════════════════════════════════════
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cmsx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-cmsx}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cmsx}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  backend:
+    image: ghcr.io/jorgedevai/cmsx:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP__SERVER__HOST: "0.0.0.0"
+      APP__SERVER__PORT: "8080"
+      PORT: "8080"
+      APP__SERVER__CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      APP__DATABASE__URL: postgres://${POSTGRES_USER:-cmsx}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cmsx}
+      APP__JWT__SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      APP__JWT__EXPIRATION: ${JWT_EXPIRATION:-3600}
+      APP__ENCRYPTION__KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      APP__STORAGE__TYPE: ${STORAGE_TYPE:-local}
+      APP__STORAGE__UPLOAD_DIR: ./uploads
+      APP__STORAGE__R2_BUCKET: ${R2_BUCKET:-}
+      APP__STORAGE__R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      APP__STORAGE__R2_ACCESS_KEY: ${R2_ACCESS_KEY:-}
+      APP__STORAGE__R2_SECRET_KEY: ${R2_SECRET_KEY:-}
+      APP__STORAGE__R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      APP__AI__ENABLED: ${AI_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      APP__RATE_LIMIT__AUTH_REQUESTS_PER_MINUTE: ${RATE_LIMIT_AUTH:-5}
+      APP__RATE_LIMIT__GLOBAL_REQUESTS_PER_MINUTE: ${RATE_LIMIT_GLOBAL:-100}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_ASSET_URL: ${NEXT_PUBLIC_ASSET_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080/api/v1
+      NEXT_PUBLIC_ASSET_URL: ${NEXT_PUBLIC_ASSET_URL:-http://localhost:8080}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - internal
+
+volumes:
+  db_data:
+  uploads_data:
+
+networks:
+  internal:
+    driver: bridge
