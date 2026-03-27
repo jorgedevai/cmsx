@@ -1,0 +1,39 @@
+[server]
+host = "127.0.0.1"
+port = 8080
+cors_origins = ["http://localhost:3000", "http://localhost:3001"]
+
+[rate_limit]
+auth_requests_per_minute = 5
+global_requests_per_minute = 100
+login_max_attempts = 5
+login_window_seconds = 300
+login_lockout_seconds = 900
+
+[database]
+url = "postgres://postgres:password@localhost:5433/cmsx"
+
+[jwt]
+secret = "change_me_in_production_please"
+expiration = 3600
+
+[storage]
+type = "local"
+# Local upload dir fallback (not used but kept for reference)
+upload_dir = "./uploads"
+
+# R2 Configuration (Must be set via env vars or here)
+# r2_bucket = "your-bucket-name"
+# r2_account_id = "your-account-id"
+# r2_access_key = "your-access-key"
+# r2_secret_key = "your-secret-key"
+# r2_public_url = "https://pub-xxx.r2.dev"
+
+[ai]
+enabled = false
+# api_key = "set_via_env_var"
+
+[encryption]
+# DEV ONLY — 32-byte hex key for AES-256-GCM field-level encryption.
+# Generate a real key for production: openssl rand -hex 32
+key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"

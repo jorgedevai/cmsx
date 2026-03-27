@@ -21,7 +21,7 @@ services:
       - internal
 
   backend:
-    image: ghcr.io/jorgedevai/cmsx:latest
+    build: ./bin
     restart: unless-stopped
     depends_on:
       db:
